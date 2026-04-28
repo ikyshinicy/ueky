@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin - Tuan Iky</title>
+    <style>
+        body { font-family: sans-serif; padding: 50px; background: #eee; }
+        .box { max-width: 600px; margin: auto; background: white; padding: 30px; border: 3px solid #000; }
+        input, textarea { width: 100%; margin: 10px 0; padding: 10px; border: 2px solid #000; }
+        button { background: #08A8F5; color: white; padding: 15px; width: 100%; border: 2px solid #000; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>Panel Admin Iky Shinicy</h2>
+        <input type="password" id="token" placeholder="GitHub Token">
+        <input type="text" id="repo" placeholder="username/repo-name">
+        <hr>
+        <h3>Update Bio</h3>
+        <textarea id="new-bio" placeholder="Bio Baru"></textarea>
+        <button onclick="updateWebsite()">SIMPAN & PUBLISH</button>
+        <p id="status"></p>
+    </div>
+
+    <script>
+        async function updateWebsite() {
+            const token = document.getElementById('token').value;
+            const repo = document.getElementById('repo').value;
+            const bio = document.getElementById('new-bio').value;
+            const status = document.getElementById('status');
+
+            status.innerText = "Menghubungkan ke GitHub...";
+
+            try {
+                // 1. Get current data.json
+                const url = `https://api.github.com/repos/${repo}/contents/data.json`;
+                const getRes = await fetch(url);
+                const fileData = await getRes.json();
+
+                // 2. Parse and Update
+                let content = JSON.parse(atob(fileData.content));
+                content.profile.bio = bio;
+
+                // 3. Push back to GitHub
+                const putRes = await fetch(url, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: "Update bio from Admin Panel",
+                        content: btoa(JSON.stringify(content, null, 2)),
+                        sha: fileData.sha
+                    })
+                });
+
+                if(putRes.ok) status.innerText = "BERHASIL! Website akan terupdate dalam 1 menit.";
+                else status.innerText = "Gagal: Periksa Token/Repo";
+            } catch (e) {
+                status.innerText = "Error: " + e.message;
+            }
+        }
+    </script>
+</body>
+</html>

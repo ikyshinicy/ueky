@@ -1,0 +1,17 @@
+{
+  "profile": {
+    "name": "Iky Shinicy",
+    "bio": "Membangun aset digital masa depan dengan AI.",
+    "role": "Prompt Assets Creator"
+  },
+  "projects": [
+    { "id": 1, "title": "Travel Poster AI", "image": "https://placehold.co/600x400/08A8F5/white", "link": "#" },
+    { "id": 2, "title": "Acid Streetwear", "image": "https://placehold.co/600x400/B8FF00/black", "link": "#" },
+    { "id": 3, "title": "3D Abstract Gate", "image": "https://placehold.co/600x400/090909/white", "link": "#" }
+  ],
+  "services": [
+    { "title": "Prompt Pack", "desc": "Template siap pakai." },
+    { "title": "Custom Identity", "desc": "Visual branding unik." },
+    { "title": "AI Direction", "desc": "Konsep konten lengkap." }
+  ]
+}
