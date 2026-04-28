@@ -2,60 +2,100 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Tuan Iky</title>
     <style>
-        body { font-family: sans-serif; padding: 50px; background: #eee; }
-        .box { max-width: 600px; margin: auto; background: white; padding: 30px; border: 3px solid #000; }
-        input, textarea { width: 100%; margin: 10px 0; padding: 10px; border: 2px solid #000; }
-        button { background: #08A8F5; color: white; padding: 15px; width: 100%; border: 2px solid #000; font-weight: bold; cursor: pointer; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background: #f0f2f5; }
+        .box { max-width: 500px; margin: auto; background: white; padding: 30px; border: 3px solid #000; box-shadow: 10px 10px 0px #000; }
+        h2, h3 { margin-top: 0; }
+        input, textarea { width: 100%; margin: 10px 0; padding: 12px; border: 2px solid #000; box-sizing: border-box; font-size: 14px; }
+        button { background: #08A8F5; color: white; padding: 15px; width: 100%; border: 2px solid #000; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #0081bd; transform: translate(-2px, -2px); box-shadow: 4px 4px 0px #000; }
+        button:active { transform: translate(0,0); box-shadow: none; }
+        #status { margin-top: 15px; font-weight: bold; padding: 10px; border-radius: 4px; display: none; }
     </style>
 </head>
 <body>
     <div class="box">
         <h2>Panel Admin Iky Shinicy</h2>
-        <input type="password" id="token" placeholder="GitHub Token">
-        <input type="text" id="repo" placeholder="username/repo-name">
+        <input type="password" id="token" placeholder="GitHub Token (ghp_...)">
+        <input type="text" id="repo" placeholder="username/repo-name (contoh: ikyshinicy/ueky)">
         <hr>
         <h3>Update Bio</h3>
-        <textarea id="new-bio" placeholder="Bio Baru"></textarea>
+        <textarea id="new-bio" rows="4" placeholder="Tulis bio baru Tuan di sini..."></textarea>
         <button onclick="updateWebsite()">SIMPAN & PUBLISH</button>
-        <p id="status"></p>
+        <div id="status"></div>
     </div>
 
     <script>
-        async function updateWebsite() {
-            const token = document.getElementById('token').value;
-            const repo = document.getElementById('repo').value;
-            const bio = document.getElementById('new-bio').value;
+        function showStatus(msg, isError = false) {
             const status = document.getElementById('status');
+            status.style.display = "block";
+            status.style.backgroundColor = isError ? "#ffebee" : "#e8f5e9";
+            status.style.color = isError ? "#c62828" : "#2e7d32";
+            status.innerText = msg;
+        }
 
-            status.innerText = "Menghubungkan ke GitHub...";
+        async function updateWebsite() {
+            const token = document.getElementById('token').value.trim();
+            const repo = document.getElementById('repo').value.trim();
+            const bio = document.getElementById('new-bio').value;
+
+            if (!token || !repo || !bio) {
+                showStatus("Mohon isi semua kolom, Tuan Iky!", true);
+                return;
+            }
+
+            showStatus("Sedang memproses...");
 
             try {
-                // 1. Get current data.json
                 const url = `https://api.github.com/repos/${repo}/contents/data.json`;
-                const getRes = await fetch(url);
+                
+                // 1. Ambil data dengan Header Authorization agar bisa akses repo private & rate limit lebih tinggi
+                const getRes = await fetch(url, {
+                    headers: { 'Authorization': `token ${token}` }
+                });
+
+                if (!getRes.ok) {
+                    throw new Error("File 'data.json' tidak ditemukan atau Token salah.");
+                }
+
                 const fileData = await getRes.json();
 
-                // 2. Parse and Update
-                let content = JSON.parse(atob(fileData.content));
+                // 2. Decode Base64 dengan aman (mendukung karakter spesial/UTF-8)
+                let contentString = decodeURIComponent(escape(atob(fileData.content)));
+                let content = JSON.parse(contentString);
+
+                // Pastikan struktur profile.bio ada
+                if (!content.profile) content.profile = {};
                 content.profile.bio = bio;
 
-                // 3. Push back to GitHub
+                // 3. Encode kembali ke Base64 (UTF-8 safe)
+                const updatedContent = btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 2))));
+
+                // 4. Push kembali ke GitHub
                 const putRes = await fetch(url, {
                     method: 'PUT',
-                    headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Authorization': `token ${token}`, 
+                        'Content-Type': 'application/json' 
+                    },
                     body: JSON.stringify({
-                        message: "Update bio from Admin Panel",
-                        content: btoa(JSON.stringify(content, null, 2)),
+                        message: "Update bio via Admin Panel",
+                        content: updatedContent,
                         sha: fileData.sha
                     })
                 });
 
-                if(putRes.ok) status.innerText = "BERHASIL! Website akan terupdate dalam 1 menit.";
-                else status.innerText = "Gagal: Periksa Token/Repo";
+                if (putRes.ok) {
+                    showStatus("BERHASIL! Perubahan akan tampil dalam beberapa saat.");
+                } else {
+                    const errorData = await putRes.json();
+                    throw new Error(errorData.message || "Gagal saat upload.");
+                }
             } catch (e) {
-                status.innerText = "Error: " + e.message;
+                showStatus("Error: " + e.message, true);
+                console.error(e);
             }
         }
     </script>
